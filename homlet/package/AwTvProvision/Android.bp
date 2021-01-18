@@ -1,0 +1,24 @@
+android_app {
+    name: "AwTvProvision",
+
+    srcs: ["**/*.java"],
+
+    platform_apis: true,
+    product_specific: true,
+    overrides: ["Provision"],
+    certificate: "platform",
+    privileged: true,
+
+    optimize: {
+        proguard_flags_files: ["proguard.flags"],
+    },
+
+}
+
+prebuilt_etc {
+    name: "provision-permissions",
+    product_specific: true,
+    sub_dir: "permissions",
+    src: "provision-permissions.xml",
+    filename_from_src: true,
+}
