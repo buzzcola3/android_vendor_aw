@@ -1,0 +1,63 @@
+#
+# init scriptures for awlogd persistent logging.
+#
+
+on property:vold.post_fs_data_done=1 && property:persist.debug.logpersistd=true
+    mkdir /data/media/awlog 0770 media_rw media_rw
+    mkdir /data/media/awlog/system 0770 media_rw media_rw
+    mkdir /data/media/awlog/main 0770 media_rw media_rw
+    mkdir /data/media/awlog/crash 0770 media_rw media_rw
+    mkdir /data/media/awlog/events 0770 media_rw media_rw
+    mkdir /data/media/awlog/radio 0770 media_rw media_rw
+    start awlog_system
+    start awlog_main
+    start awlog_crash
+    start awlog_events
+    start awlog_radio
+
+on property:vold.post_fs_data_done=1 && property:persist.debug.logpersistd=false
+    stop awlog_system
+    stop awlog_main
+    stop awlog_crash
+    stop awlog_events
+    stop awlog_radio
+    exec - logd media_rw -- /system/bin/awlogd -c -f /data/media/awlog/system/logcat
+    exec - logd media_rw -- /system/bin/awlogd -c -f /data/media/awlog/main/logcat
+    exec - logd media_rw -- /system/bin/awlogd -c -f /data/media/awlog/crash/logcat
+    exec - logd media_rw -- /system/bin/awlogd -c -f /data/media/awlog/events/logcat
+    exec - logd media_rw -- /system/bin/awlogd -c -f /data/media/awlog/radio/logcat
+
+service awlog_system /system/bin/awlogd -L -b system -v threadtime -v usec -v printable -D -f /data/media/awlog/system/logcat -r 8192 -n 4 --id=${ro.build.id}
+    disabled
+    user logd
+    group media_rw log
+    writepid /dev/cpuset/system-background/tasks
+    oom_score_adjust -600
+
+service awlog_main /system/bin/awlogd -L -b main -v threadtime -v usec -v printable -D -f /data/media/awlog/main/logcat -r 8192 -n 4 --id=${ro.build.id}
+    disabled
+    user logd
+    group media_rw log
+    writepid /dev/cpuset/system-background/tasks
+    oom_score_adjust -600
+
+service awlog_crash /system/bin/awlogd -L -b crash -v threadtime -v usec -v printable -D -f /data/media/awlog/crash/logcat -r 8192 -n 4 --id=${ro.build.id}
+    disabled
+    user logd
+    group media_rw log
+    writepid /dev/cpuset/system-background/tasks
+    oom_score_adjust -600
+
+service awlog_events /system/bin/awlogd -L -b events -v threadtime -v usec -v printable -D -f /data/media/awlog/events/logcat -r 8192 -n 4 --id=${ro.build.id}
+    disabled
+    user logd
+    group media_rw log
+    writepid /dev/cpuset/system-background/tasks
+    oom_score_adjust -600
+
+service awlog_radio /system/bin/awlogd -L -b radio -v threadtime -v usec -v printable -D -f /data/media/awlog/radio/logcat -r 8192 -n 4 --id=${ro.build.id}
+    disabled
+    user logd
+    group media_rw log
+    writepid /dev/cpuset/system-background/tasks
+    oom_score_adjust -600

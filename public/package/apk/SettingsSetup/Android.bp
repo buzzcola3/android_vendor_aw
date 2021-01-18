@@ -1,0 +1,6 @@
+android_app {
+    name: "SettingsSetup",
+    srcs: ["**/*.java"],
+    product_specific: true,
+    certificate: "platform",
+}

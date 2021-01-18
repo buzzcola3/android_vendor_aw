@@ -1,0 +1,21 @@
+#
+# init scriptures for kmsgd persistent logging.
+#
+
+on property:vold.post_fs_data_done=1 && property:persist.debug.logpersistd=true
+    mkdir /data/media/awlog 0770 media_rw media_rw
+    mkdir /data/media/awlog/kmsg 0770 media_rw media_rw
+    start kmsgd
+
+on property:vold.post_fs_data_done=1 && property:persist.debug.logpersistd=false
+    stop kmsgd
+    exec - media_rw media_rw -- /system/bin/kmsgd -c -f /data/media/awlog
+
+# kmsgd service
+service kmsgd /system/bin/kmsgd -f /data/media/awlog/kmsg/kmsg -r 20480 -n 4
+    disabled
+    file /dev/kmsg r
+    user root
+    group media_rw sdcard_rw log
+    writepid /dev/cpuset/system-background/tasks
+    oom_score_adjust -600
