@@ -1,0 +1,191 @@
+diff --git a/package/DragonBox/src/com/softwinner/dragonbox/DragonBoxMain.java b/package/DragonBox/src/com/softwinner/dragonbox/DragonBoxMain.java
+index 64733c2..c028f8b 100755
+--- a/package/DragonBox/src/com/softwinner/dragonbox/DragonBoxMain.java
++++ b/package/DragonBox/src/com/softwinner/dragonbox/DragonBoxMain.java
+@@ -80,11 +80,13 @@ public class DragonBoxMain extends Activity implements IBaseCase.onResultChangeL
+ 	private static final int WHAT_HANDLE_SHOW_MESSAGE_DIALOG=6;
+ 	private static final int WHAT_HANDLE_SAVESSN_NEW = 7;
+ 	private static final int WHAT_HANDLE_SFCTESTRESULT_UPLOAD = 8;
++	private static final int WHAT_HANDLE_ONRESULTCHANGE_CONTINUE = 9;
+ 	
+ 	private static final int WIFI_CONNECT_TIMEOUT = 10*1000;//wifi 连接超时10s
+ 	private static final int RETRY_CONNECT_SERVER_TIMES =5;//重连服务器次数。
+ 	private static final String TIME_WEBSITE="http://www.mi.com";
+ 	public static final String TAG="DragonBox-DragonBoxMain";
++	public static final String LOG_END_FLAG="DragonBox-test_over";
+ 	private static final String PROPERTY_DRAGONAGING_NEXTBOOT = "persist.sys.dragonaging";
+ 	private static final String PROPERTY_DRAGONAGING_TIME = "persist.sys.dragonaging_time";
+ 	private static final String PROPERTY_DRAGONBOX_SMT = "persist.sys.smt_dragonbox";
+@@ -103,6 +105,7 @@ public class DragonBoxMain extends Activity implements IBaseCase.onResultChangeL
+ 	private AlertDialog wifiConnectTimeoutDialog = null;
+ 	private boolean useSFC =false;
+     private boolean alreadyUpload = false;
++    private int waitLog = 0;//最多等待5s,超时后,继续下面的操作
+ 	
+ 	Handler mHandler = new Handler(){
+ 		public void handleMessage(android.os.Message msg) {
+@@ -200,6 +203,9 @@ public class DragonBoxMain extends Activity implements IBaseCase.onResultChangeL
+ 				}
+ 				NetUtil.forgetWifi(DragonBoxMain.this);
+ 				break;
++            case WHAT_HANDLE_ONRESULTCHANGE_CONTINUE:
++                onResultChangeContinue();
++                break;
+ 			default:
+ 					break;
+ 			}
+@@ -671,6 +677,27 @@ public class DragonBoxMain extends Activity implements IBaseCase.onResultChangeL
+             }
+             NetUtil.forgetWifi(DragonBoxMain.this);
+             Utils.setPropertySecure(PROPERTY_DRAGONBOX_SMT,"test_over");
++        }
++        Log.w(TAG,"LogcatHelper.logEnd = "+LogcatHelper.logEnd);
++        Log.w(TAG,LOG_END_FLAG);//DragonBox 日志收集结束的标志
++
++        progressDialog = new ProgressDialog(DragonBoxMain.this);
++        progressDialog.setMessage("请稍等...");
++        progressDialog.show();
++        mHandler.sendEmptyMessage(WHAT_HANDLE_ONRESULTCHANGE_CONTINUE);
++    }
++    private void onResultChangeContinue(){
++        Log.w(TAG,"waitLog = "+waitLog*200+"ms");
++        Log.w(TAG,"LogcatHelper.logEnd = "+LogcatHelper.logEnd);
++        if(waitLog<25 && !LogcatHelper.logEnd){
++            mHandler.sendEmptyMessageDelayed(WHAT_HANDLE_ONRESULTCHANGE_CONTINUE,200);
++            waitLog++;
++            return;
++        }
++        if(progressDialog!=null&&progressDialog.isShowing()){//隐藏请稍后进度对话框
++            progressDialog.dismiss();
++        }
++        if(!useSFC){
+             if(mTestResult.equals("PASS")){
+                 showAlertDialogToFinish("成功!",40);
+             }else{
+diff --git a/package/DragonBox/src/com/softwinner/dragonbox/utils/LogcatHelper.java b/package/DragonBox/src/com/softwinner/dragonbox/utils/LogcatHelper.java
+index 909ced7..d15b1a4 100755
+--- a/package/DragonBox/src/com/softwinner/dragonbox/utils/LogcatHelper.java
++++ b/package/DragonBox/src/com/softwinner/dragonbox/utils/LogcatHelper.java
+@@ -13,6 +13,8 @@ import java.io.IOException;
+ import java.io.InputStreamReader;
+ import java.io.OutputStreamWriter;
+ 
++import com.softwinner.dragonbox.DragonBoxMain;
++
+ /**
+  * TODO<log日志统计保存>
+  *
+@@ -27,6 +29,7 @@ public final class LogcatHelper {
+     private static String       pathLogcat;
+     private LogDumper           mLogDumper = null;
+     private int                 mPId;
++    public static boolean logEnd = false;//true标志这dragonbox的日志已经写入到磁盘上
+ 
+     /**
+      *
+@@ -48,8 +51,8 @@ public final class LogcatHelper {
+             file.mkdirs();
+         }
+ 
+-        Log.v("maizirong", "==============Begin Logcat==============");
+-        Log.v("maizirong", "========Logcat File========" + file.getPath());
++        Log.v(TAG, "==============Begin Logcat==============");
++        Log.v(TAG, "========Logcat File========" + file.getPath());
+ 
+     }
+ 
+@@ -91,13 +94,12 @@ public final class LogcatHelper {
+ 
+         LogDumper(String pid, String dir) {
+             mPID = pid;
+-            //try {
+-            //    out = new FileOutputStream(new File(dir, "allwinnerAging-" + MyDate.getFileName()
+-            //            + ".txt" + ""));
+-            //} catch (FileNotFoundException e) {
+-            //    // TODO Auto-generated catch block
+-            //    e.printStackTrace();
+-            //}
++            try {
++                out = new FileOutputStream(new File(dir,"DragonBox-log.txt"));
++            } catch (FileNotFoundException e) {
++                // TODO Auto-generated catch block
++                e.printStackTrace();
++            }
+ 
+             /**
+              *
+@@ -122,40 +124,30 @@ public final class LogcatHelper {
+         public void run() {
+             try {
+                 logcatProc = Runtime.getRuntime().exec(cmds);
+-                String tempCmd = "/system/bin/logcat -v time -f /sdcard/ALLWINNERBOX/DragonBox-log.txt -n 1 -r 100000\n";
++                String tempCmd = "/system/bin/logcat -v time\n";
+                 mWriter = new BufferedWriter(new OutputStreamWriter(logcatProc.getOutputStream()));
+                 mReader = new BufferedReader(new InputStreamReader(logcatProc.getInputStream()));
+                 mWriter.write(tempCmd);
+                 mWriter.flush();
+                 String line = null;
+                 while (mRunning) {
+-                    Log.e(TAG,"readLine,we suppose this thread block here!");
+                     line = mReader.readLine();
+                     if (!mRunning) {
+                         break;
+                     }
+-                    if (line.length() == 0) {
++                    if ((line == null)||(line.length() == 0)) {
+                         continue;
+                     }
++                    if (out != null) {
++                        out.write((line + "\n").getBytes());
++                        if(line.contains(DragonBoxMain.LOG_END_FLAG)){
++                            Log.e(TAG,"-------detect LOG_END_FLAG");
++                            out.flush();
++                            out.getFD().sync();
++                            logEnd = true;
++                        }
++                    }
+                 }
+-                //while (mRunning) {
+-                //    line = mReader.readLine();
+-                //    if (line == null) {
+-
+-                //        break;
+-                //    }
+-                //    if (!mRunning) {
+-                //        break;
+-                //    }
+-                //    if (line.length() == 0) {
+-                //        continue;
+-                //    }
+-                //    if (out != null) {
+-                //    //if (out != null && line.contains(mPID)) {
+-                //        out.write((MyDate.getDateEN() + "  " + line + "\n").getBytes());
+-                //    }
+-                //}
+-
+             } catch (IOException e) {
+                 Log.e(TAG,"exception");
+                 e.printStackTrace();
+@@ -173,14 +165,14 @@ public final class LogcatHelper {
+                         e.printStackTrace();
+                     }
+                 }
+-                //if (mReader != null) {
+-                //    try {
+-                //        mReader.close();
+-                //        mReader = null;
+-                //    } catch (IOException e) {
+-                //        e.printStackTrace();
+-                //    }
+-                //}
++                if (mReader != null) {
++                    try {
++                        mReader.close();
++                        mReader = null;
++                    } catch (IOException e) {
++                        e.printStackTrace();
++                    }
++                }
+                 if (out != null) {
+                     try {
+                         out.close();
