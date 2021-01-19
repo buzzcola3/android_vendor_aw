@@ -1,0 +1,31 @@
+## label graphics device with a new type, we need
+## to allow write operation from appdomain
+#
+#/vendor/bin/softwinner.homlet.displayd@1.0-service u:object_r:displayd_exec:s0
+/system/bin/gpioservice     u:object_r:gpioservice_exec:s0
+/system/bin/isomountservice     u:object_r:isomountservice_exec:s0
+# cedar_dev
+#/dev/sunxi_soc_info        u:object_r:sunxi_soc_info_device:s0
+#/dev/deinterlace           u:object_r:deinterlace_device:s0
+#/dev/googlevp9_dev         u:object_r:googlevp9_device:s0
+#gpio
+/sys/class/gpio_sw/normal_led/light    u:object_r:sysfs_gpio:s0
+/sys/class/gpio_sw/standby_led/light    u:object_r:sysfs_gpio:s0
+
+#qw
+/system/bin/qw             u:object_r:qw_exec:s0
+
+#pppoe
+/system/bin/pppoe              u:object_r:start_pppoe_exec:s0
+/system/bin/pppoe-disconnect   u:object_r:stop_pppoe_exec:s0
+/system/bin/pppoe-connect      u:object_r:start_pppoe_exec:s0
+/data/misc/pppoe(/.*)?         u:object_r:pppoe_data_file:s0
+
+#net
+/sys/devices/platform/soc/gmac0/net/eth0(/.*)?  u:object_r:sysfs_net_eth0:s0
+/sys/devices/platform/soc/gmac1/net/eth0(/.*)?  u:object_r:sysfs_net_eth0:s0
+/sys/devices/platform/xradio_device.0/net/wlan0(/.*)?  u:object_r:sysfs_wlan0:s0
+
+#hdmi-cec
+/dev/cec  u:object_r:graphics_device:s0
+/dev/hdmi u:object_r:graphics_device:s0
